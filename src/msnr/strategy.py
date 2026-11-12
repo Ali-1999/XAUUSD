@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from itertools import groupby
 
 M15 = 900
+H1 = 3_600
 H4 = 14_400
 LEVEL_AGE = 7 * 86_400
 ZONE = 0.35
@@ -21,17 +22,40 @@ class Setup:
     breakout: int | None = None
 
 
-def four_hour_bars(bars: list[dict]) -> list[dict]:
+def complete_bars(bars: list[dict], period: int, source: int = M15) -> list[dict]:
     result = []
-    for time, group in groupby(bars, key=lambda bar: bar["time"] // H4 * H4):
+    for time, group in groupby(bars, key=lambda bar: bar["time"] // period * period):
         block = list(group)
-        if len(block) != 16 or any(bar["time"] != time + index * M15 for index, bar in enumerate(block)):
+        if len(block) != period // source or any(bar["time"] != time + index * source for index, bar in enumerate(block)):
             continue
         result.append({
             "time": time, "open": block[0]["open"], "close": block[-1]["close"],
             "high": max(bar["high"] for bar in block), "low": min(bar["low"] for bar in block),
         })
     return result
+
+
+def four_hour_bars(bars: list[dict]) -> list[dict]:
+    return complete_bars(bars, H4)
+
+
+def hourly_levels(bars: list[dict]):
+    """H1 open-close levels confirmed by three contiguous candles."""
+    hours = complete_bars(bars, H1)
+    for first, middle, last in zip(hours, hours[1:], hours[2:]):
+        if last["time"] - first["time"] != 2 * H1:
+            continue
+        moves = [bar["close"] - bar["open"] for bar in (first, middle, last)]
+        if min(moves) > 0 or max(moves) < 0:
+            yield {"side": "buy" if moves[0] > 0 else "sell", "price": middle["close"], "knownAt": last["time"] + H1}
+
+
+def hourly_context(bars: list[dict]) -> list[dict]:
+    if not bars:
+        return []
+    latest = bars[-1]["time"] + M15
+    levels = (level for level in hourly_levels(bars) if latest - level["knownAt"] < LEVEL_AGE)
+    return sorted(levels, key=lambda level: abs(level["price"] - bars[-1]["close"]))[:2]
 
 
 def body_levels(h4: list[dict], start: int):
@@ -93,7 +117,7 @@ def advance(setup: Setup, bar: dict) -> tuple[Setup | None, dict | None]:
     }
 
 
-def analyse(bars: list[dict]) -> dict:
+def analyse(bars: list[dict], *, trace: list[dict] | None = None) -> dict:
     h4 = four_hour_bars(bars)
     pending = deque(body_levels(h4, bars[0]["time"] if bars else 0))
     recent = deque(maxlen=STRUCTURE_BARS)
@@ -114,11 +138,21 @@ def analyse(bars: list[dict]) -> dict:
         fresh = active
         signal = None
         if setup:
+            prior_break = setup.breakout
             setup, signal = advance(setup, bar)
+            if trace is not None:
+                if signal:
+                    trace.append({"type": "retest", "barTime": time, **signal})
+                elif setup and prior_break is None and setup.breakout is not None:
+                    trace.append({"type": "break", "time": time + M15, "barTime": time,
+                                  "side": setup.level["side"], "structure": setup.structure})
         if signal:
             last_signal = signal
         elif not setup and touched and len(recent) == STRUCTURE_BARS:
             setup = rejection(touched, recent, bar)
+            if setup and trace is not None:
+                trace.append({"type": "rejection", "time": time + M15, "barTime": time,
+                              "side": setup.level["side"], "level": setup.level["price"]})
         recent.append(bar)
 
     last = bars[-1] if bars else None

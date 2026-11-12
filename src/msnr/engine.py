@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from math import ceil, floor, isfinite
 
-from .strategy import LEVEL_AGE, M15, analyse
+from .strategy import LEVEL_AGE, M15, analyse, hourly_context
 
 QUOTE_MAX_AGE = 120
 SAMPLE_GAP = 180
@@ -190,7 +190,10 @@ def accept_quote(state: dict, quote: dict, now: int) -> bool:
         return True
     cutoff = quote["time"] - LOOKBACK
     state["bars"] = [item for item in (*state["bars"], bar) if item["time"] >= cutoff][-MAX_BARS:]
-    state["analysis"] = analyse(state["bars"])
+    trace = []
+    state["analysis"] = analyse(state["bars"], trace=trace)
+    state["analysis"]["markers"] = trace[-48:]
+    state["analysis"]["contextLevels"] = hourly_context(state["bars"])
     signal = state["analysis"]["lastSignal"]
     if not signal or signal["time"] != bar["time"] + M15:
         return True
@@ -220,6 +223,7 @@ def snapshot(state: dict, now: int) -> dict:
     if last and now - (last["time"] + M15) > M15 + SAMPLE_GAP and analysis["stage"] != "warmup":
         analysis["stage"] = "gap"
     analysis["levels"] = [level for level in analysis["levels"] if now - level["knownAt"] < LEVEL_AGE]
+    analysis["contextLevels"] = [level for level in analysis.get("contextLevels", []) if now - level["knownAt"] < LEVEL_AGE]
     status = "degraded" if state["error"] else "starting"
     if not state["error"] and age is not None:
         status = "live" if age <= QUOTE_MAX_AGE else "stale"

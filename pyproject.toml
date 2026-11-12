@@ -7,6 +7,7 @@ dependencies = []
 
 [dependency-groups]
 dev = ["workers-py==1.17.9", "workers-runtime-sdk==1.9.6"]
+backtest = ["backtesting==0.6.6", "dukascopy-python==6.0.0", "pandas>=2.3,<4"]
 
 [tool.uv]
 package = false

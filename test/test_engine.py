@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from src.msnr.engine import QuoteError, accept_quote, initial_state, plan_trade, quote_from_provider, snapshot
-from src.msnr.strategy import M15, analyse
+from src.msnr.strategy import H1, M15, analyse, hourly_context
 
 
 with Path(__file__).with_name("fixtures").joinpath("sample_m15.csv").open(newline="") as source:
@@ -31,6 +31,28 @@ class EngineTests(unittest.TestCase):
     def test_gap_cancels_setup(self):
         gap = {**BARS[34], "time": BARS[34]["time"] + M15}
         self.assertIsNone(analyse([*BARS[:34], gap])["lastSignal"])
+
+    def test_trace_matches_closed_candle_sequence(self):
+        trace = []
+        result = analyse(BARS[:35], trace=trace)
+        self.assertEqual(result, analyse(BARS[:35]))
+        self.assertEqual([event["type"] for event in trace], ["rejection", "break", "retest"])
+        self.assertEqual([event["time"] for event in trace], [bar["time"] + M15 for bar in BARS[32:35]])
+        for prefix in range(32, 35):
+            earlier = []
+            analyse(BARS[:prefix], trace=earlier)
+            self.assertEqual(earlier, [event for event in trace if event["time"] <= BARS[prefix - 1]["time"] + M15])
+
+    def test_hourly_open_close_needs_three_complete_contiguous_hours(self):
+        start = START // H1 * H1
+        bars = [
+            {"time": start + index * M15, "open": 3900 + index, "high": 3902 + index,
+             "low": 3899 + index, "close": 3901 + index}
+            for index in range(12)
+        ]
+        self.assertEqual(hourly_context(bars[:-1]), [])
+        self.assertEqual(hourly_context(bars[:6] + bars[7:]), [])
+        self.assertEqual(hourly_context(bars), [{"side": "buy", "price": 3908, "knownAt": start + 3 * H1}])
 
     def test_candle_requires_sufficient_observations(self):
         state = initial_state()

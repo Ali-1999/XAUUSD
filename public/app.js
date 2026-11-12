@@ -11,29 +11,39 @@ const utc = (time) => number(time) ? new Date(time * 1000).toISOString().slice(5
 const side = (value) => value === "buy" ? "Buy" : "Sell";
 
 const charts = window.LightweightCharts;
-const chart = charts.createChart(el("chart"), {
-  autoSize: true,
-  layout: { background: { color: "#111d2a" }, textColor: "#a1afbf", attributionLogo: true },
-  grid: { vertLines: { color: "#1b2c3b" }, horzLines: { color: "#1b2c3b" } },
-  timeScale: { timeVisible: true, secondsVisible: false, borderColor: "#283747" },
-  rightPriceScale: { borderColor: "#283747" },
-});
+const chart = marketChart.create(el("chart"));
 const line = chart.addSeries(charts.LineSeries, { color: "#efc579", lineWidth: 2, priceLineVisible: false });
-const candles = chart.addSeries(charts.CandlestickSeries, {
-  visible: false, upColor: "#64d5ae", downColor: "#ec8a8d", wickUpColor: "#64d5ae", wickDownColor: "#ec8a8d",
-  borderVisible: false, priceFormat: { type: "price", precision: 2, minMove: 0.01 },
-});
-let priceLines = [];
+const candles = marketChart.candles(chart, false);
+const candleOverlay = marketChart.overlay(candles);
+const spotOverlay = marketChart.overlay(line);
 let busy = false;
 let selected = el("timeframe").value;
 let renderedFrame = null;
 let renderedQuoteAt = 0;
 let frameRequest = 0;
+let lastChart = null;
+
+function chartLevels(analysis, position) {
+  const { support, resistance, structure } = marketChart.colors;
+  const levels = analysis.levels.map((level) => ({
+    price: level.price, color: level.side === "buy" ? support : resistance,
+    title: level.side === "buy" ? "H4 V" : "H4 A",
+  }));
+  for (const level of analysis.contextLevels ?? []) {
+    levels.push({ price: level.price, title: "H1 OCL", color: structure });
+  }
+  if (["break", "retest"].includes(analysis.stage) && number(analysis.structure)) {
+    levels.push({ price: analysis.structure, title: "M15 structure", color: structure });
+  }
+  if (position) levels.push(...marketChart.tradeLines(position, "Paper entry"));
+  return levels;
+}
 
 function chartData(data) {
   const series = data.chart;
   const quoteAt = data.quote?.time ?? 0;
   if (series?.timeframe !== selected || (renderedFrame === selected && quoteAt < renderedQuoteAt)) return;
+  lastChart = data;
   const useCandles = selected !== "spot";
   const visible = useCandles ? series.candles : series.points;
   line.applyOptions({ visible: !useCandles });
@@ -41,12 +51,11 @@ function chartData(data) {
   line.setData(useCandles ? [] : visible);
   candles.setData(useCandles ? visible : []);
   chart.timeScale().applyOptions({ timeVisible: !["D1", "W1", "MN1"].includes(selected) });
-  for (const level of priceLines) candles.removePriceLine(level);
-  priceLines = data.analysis.levels.map((level) => candles.createPriceLine({
-    price: level.price, color: level.side === "buy" ? "#64d5ae" : "#efc579",
-    lineWidth: 1, lineStyle: charts.LineStyle.Dashed, axisLabelVisible: true,
-    title: level.side === "buy" ? "V" : "A",
-  }));
+  const showAnalysis = el("show-analysis").checked && visible.length;
+  const events = showAnalysis ? [...(data.analysis.markers ?? []), ...data.events] : [];
+  const levels = showAnalysis ? chartLevels(data.analysis, data.position) : [];
+  candleOverlay(useCandles ? visible : [], useCandles ? events : [], useCandles ? levels : [], quoteAt);
+  spotOverlay(useCandles ? [] : visible, useCandles ? [] : events, useCandles ? [] : levels, quoteAt);
   el("empty").hidden = visible.length > 0;
   set("empty", "Waiting for a spot quote");
   set("chart-caption", useCandles ? selected + " candles from Gold API spot samples · UTC" : "Gold API spot samples · UTC");
@@ -114,6 +123,8 @@ function render(data) {
   el("stage-retest").className = setup.stage === "retest" ? "active" : "";
   const level = setup.levels[0];
   set("level", level ? (level.side === "buy" ? "V " : "A ") + price(level.price) : "—");
+  const hourlyLevel = setup.contextLevels?.[0];
+  set("hourly-level", hourlyLevel ? price(hourlyLevel.price) : "—");
   set("structure", ["break", "retest"].includes(setup.stage) ? price(setup.structure) : "—");
   const s = setup.lastSignal;
   set("signal", s ? side(s.side) + " · " + utc(s.time) : "—");
@@ -154,8 +165,8 @@ el("timeframe").addEventListener("change", async () => {
   renderedFrame = null;
   line.setData([]);
   candles.setData([]);
-  for (const level of priceLines) candles.removePriceLine(level);
-  priceLines = [];
+  candleOverlay([], [], [], 0);
+  spotOverlay([], [], [], 0);
   set("chart-caption", "Gold API spot samples · UTC");
   set("sampling", "");
   set("empty", "Loading " + (selected === "spot" ? "spot samples" : selected + " candles"));
@@ -167,6 +178,7 @@ el("timeframe").addEventListener("change", async () => {
     if (request === frameRequest && renderedFrame !== selected) set("empty", "Chart unavailable (" + error.message + ")");
   }
 });
+el("show-analysis").addEventListener("change", () => { if (lastChart) chartData(lastChart); });
 el("refresh").addEventListener("click", refresh);
 refresh();
 setInterval(refresh, 20_000);

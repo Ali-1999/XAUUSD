@@ -37,10 +37,11 @@ header { border-bottom: 1px solid var(--line); background: #101925; }
   color: var(--gold); font: 600 16px var(--mono);
 }
 .paper-tag { color: var(--gold); font-size: 12px; white-space: nowrap; }
-.header-end button, .chart-control select {
+.header-end button, .button-link, .chart-control select {
   padding: 7px 10px; background: #162332; border: 1px solid var(--line); border-radius: 6px; font-size: 12px;
 }
-.header-end button:hover, .chart-control select:hover { border-color: #6d5834; color: var(--gold); }
+.button-link { color: var(--text); text-decoration: none; white-space: nowrap; }
+.header-end button:hover, .button-link:hover, .chart-control select:hover { border-color: #6d5834; color: var(--gold); }
 
 main { max-width: 1380px; margin: auto; padding: 22px 28px; }
 .market {
@@ -76,9 +77,26 @@ main { max-width: 1380px; margin: auto; padding: 22px 28px; }
 #chart { height: clamp(265px, 37vh, 390px); }
 #empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); pointer-events: none; font-size: 13px; }
 .chart-legend { display: flex; flex-wrap: wrap; gap: 13px; padding: 10px 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }
+.chart-legend label { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+.chart-legend input, .replay-cursor input { accent-color: var(--gold); }
 .dot { margin-right: 4px; }
 .gold { color: var(--gold); }
 .mint { color: var(--mint); }
+.blue { color: #8eb9ff; }
+
+.replay-overview { flex-wrap: wrap; }
+.replay-overview h2 { font-size: 21px; margin-bottom: 5px; }
+.replay-options { display: grid; justify-items: end; gap: 8px; }
+.replay-options select { max-width: 100%; }
+.file-picker { display: flex; align-items: center; gap: 6px; }
+.file-picker input { width: 145px; max-width: 100%; font: inherit; }
+.replay-cursor {
+  display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-top: 1px solid var(--line);
+  color: var(--muted); font-size: 12px;
+}
+.replay-cursor input { flex: 1; min-width: 40px; }
+.replay-cursor output { font-family: var(--mono); white-space: nowrap; }
+.trade-link { padding: 0; border: 0; background: none; text-decoration: underline; color: var(--gold); font-size: inherit; }
 
 .stages { list-style: none; margin: 0; padding: 0 16px 9px; }
 .stages li { padding: 8px 0 8px 14px; position: relative; }
@@ -117,4 +135,7 @@ footer a { color: var(--muted); }
   .mark { width: 34px; height: 34px; }
   .metrics article { padding: 10px; }
   .chart-control { align-items: flex-start; flex-direction: column; gap: 3px; }
+  .replay-cursor { flex-wrap: wrap; }
+  .replay-options { justify-items: start; }
+  .header-end { flex-wrap: wrap; justify-content: end; }
 }

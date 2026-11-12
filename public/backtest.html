@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="Replay XAU/USD MSNR setups and simulated fills on historical Dukascopy candles.">
+  <title>XAU/USD MSNR Backtest</title>
+  <link rel="stylesheet" href="/style.css">
+  <script defer src="/vendor/lightweight-charts.js"></script>
+  <script defer src="/chart-overlays.js"></script>
+  <script defer src="/backtest.js"></script>
+</head>
+<body>
+  <header>
+    <div class="masthead">
+      <div class="brand"><span class="mark" aria-hidden="true">Au</span><h1>XAU/USD <span>MSNR</span></h1></div>
+      <div class="header-end"><a class="button-link" href="/">Live dashboard</a><span class="paper-tag">Backtest</span></div>
+    </div>
+  </header>
+  <main>
+    <section class="market replay-overview" aria-labelledby="replay-title">
+      <div>
+        <h2 id="replay-title">Historical replay</h2>
+        <p class="muted" id="replay-source">Loading the Dukascopy replay</p>
+        <p class="muted" id="replay-coverage"></p>
+      </div>
+      <div class="replay-options">
+        <div class="chart-control"><label for="run">Test window</label><select id="run" disabled></select></div>
+        <label class="file-picker muted">Load a replay file <input id="report-file" type="file" accept="application/json,.json"></label>
+      </div>
+    </section>
+    <p class="alert" id="replay-error" role="alert" hidden></p>
+    <section class="metrics" aria-label="Backtest results for the selected window">
+      <article><h2>Net return</h2><p id="net-return">—</p><small id="final-equity">Ending equity</small></article>
+      <article><h2>Maximum drawdown</h2><p id="drawdown">—</p><small>Peak-to-trough equity decline</small></article>
+      <article><h2>Closed trades</h2><p id="trade-count">—</p><small id="signal-count">Confirmed retests</small></article>
+      <article><h2>Win rate</h2><p id="win-rate">—</p><small>After modelled execution costs</small></article>
+    </section>
+    <section class="panel" aria-labelledby="backtest-chart-title">
+      <div class="panel-head">
+        <div><h2 id="backtest-chart-title">XAU/USD price and setups</h2><p class="muted" id="replay-caption">Historical candles · UTC</p></div>
+        <div class="chart-control"><label for="timeframe">Timeframe</label><select id="timeframe"><option>M15</option><option>H1</option><option>H4</option><option>D1</option></select></div>
+      </div>
+      <div class="chart-wrap"><div id="chart" aria-label="Historical price candles with setup and trade markers"></div></div>
+      <div class="replay-cursor">
+        <label for="replay-position">Replay position</label>
+        <input id="replay-position" type="range" min="0" max="0" value="0" disabled>
+        <output id="replay-date" for="replay-position">—</output>
+      </div>
+      <div class="chart-legend">
+        <label><input type="checkbox" id="show-analysis" checked> MSNR overlays</label>
+        <span><i class="dot gold"></i> H4 rejection</span>
+        <span><i class="dot blue"></i> H1 open-close / M15 break</span>
+        <span>Retest, entry and exit are labelled on the candles</span>
+      </div>
+    </section>
+    <section class="panel journal" aria-labelledby="trades-title">
+      <div class="panel-head"><div><h2 id="trades-title">Trades in the test window</h2><p class="muted" id="replay-model">Select an entry time to inspect the trade on the chart.</p></div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Entry UTC</th><th>Exit UTC</th><th>Side</th><th>Entry / exit price</th><th>Net P&amp;L</th></tr></thead>
+          <tbody id="trades"><tr><td colspan="5">Loading trades</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+    <footer><a href="https://www.dukascopy.com/swiss/english/marketwatch/historical/">Dukascopy historical data</a><a href="https://github.com/kernc/backtesting.py">Backtesting.py</a><a href="https://www.tradingview.com/">Chart by TradingView</a></footer>
+  </main>
+</body>
+</html>

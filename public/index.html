@@ -8,13 +8,14 @@
   <title>XAU/USD MSNR Live</title>
   <link rel="stylesheet" href="/style.css">
   <script defer src="/vendor/lightweight-charts.js"></script>
+  <script defer src="/chart-overlays.js"></script>
   <script defer src="/app.js"></script>
 </head>
 <body>
   <header>
     <div class="masthead">
       <div class="brand"><span class="mark" aria-hidden="true">Au</span><h1>XAU/USD <span>MSNR</span></h1></div>
-      <div class="header-end"><span class="paper-tag">Paper trading</span><button id="refresh" type="button">Refresh</button></div>
+      <div class="header-end"><span class="paper-tag">Paper trading</span><a class="button-link" href="/backtest.html">Backtest</a><button id="refresh" type="button">Refresh</button></div>
     </div>
   </header>
   <main>
@@ -61,8 +62,10 @@
         <div class="chart-wrap"><div id="chart" aria-label="Spot price and sampled candles"></div><p id="empty">Waiting for a spot quote</p></div>
         <div class="chart-legend">
           <span id="sampling">Collecting quotes</span>
+          <label><input type="checkbox" id="show-analysis" checked> MSNR overlays</label>
           <span><i class="dot gold"></i> H4 A resistance</span>
           <span><i class="dot mint"></i> H4 V support</span>
+          <span><i class="dot blue"></i> H1 open-close / M15 break</span>
         </div>
       </section>
       <section class="panel" aria-labelledby="analysis-title">
@@ -74,6 +77,7 @@
         </ol>
         <dl class="detail">
           <div><dt>Nearest H4 level</dt><dd id="level">—</dd></div>
+          <div><dt>Nearest H1 open-close</dt><dd id="hourly-level">—</dd></div>
           <div><dt>Break or retest level</dt><dd id="structure">—</dd></div>
           <div><dt>Last confirmed signal</dt><dd id="signal">—</dd></div>
           <div><dt>Paper position</dt><dd id="position">—</dd></div>
