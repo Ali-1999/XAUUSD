@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="Live XAU/USD spot observations, closed-candle MSNR analysis and an automated paper account.">
+  <title>XAU/USD MSNR Live</title>
+  <link rel="stylesheet" href="/style.css">
+  <script defer src="/vendor/lightweight-charts.js"></script>
+  <script defer src="/app.js"></script>
+</head>
+<body>
+  <header>
+    <div class="masthead">
+      <div class="brand"><span class="mark" aria-hidden="true">Au</span><h1>XAU/USD <span>MSNR</span></h1></div>
+      <div class="header-end"><span class="paper-tag">Paper trading</span><button id="refresh" type="button">Refresh</button></div>
+    </div>
+  </header>
+  <main>
+    <section class="market" aria-labelledby="market-title">
+      <div>
+        <p class="eyebrow" id="market-title">Spot gold / US dollar</p>
+        <div class="price-line"><strong id="price">—</strong><span id="change"></span></div>
+        <p id="source" class="muted">Gold API · USD per troy ounce</p>
+      </div>
+      <div class="feed-info">
+        <p class="status" id="status" role="status">Connecting</p>
+        <p class="muted" id="timestamp">Waiting for provider timestamp</p>
+        <p class="muted" id="heartbeat">Checking refresh mode</p>
+      </div>
+    </section>
+    <p class="alert" id="alert" role="alert" hidden></p>
+    <section class="metrics" aria-label="Paper account">
+      <article><h2>Equity</h2><p id="equity">—</p><small id="daily-change">UTC day change</small></article>
+      <article><h2>Daily equity base</h2><p id="base">—</p><small id="utc-day">First observed equity · UTC</small></article>
+      <article><h2>Next entry budget</h2><p id="budget">—</p><small>0.25% risk · 1% daily cutoff</small></article>
+      <article><h2>Entries today</h2><p id="entries">—</p><small id="closed">Simulated fills</small></article>
+    </section>
+    <div class="desk">
+      <section class="panel" aria-labelledby="chart-title">
+        <div class="panel-head">
+          <div><h2 id="chart-title">XAU/USD</h2><p class="muted" id="chart-caption">Gold API spot samples · UTC</p></div>
+          <div class="segments" aria-label="Chart series">
+            <button id="samples" aria-pressed="true" type="button">Samples</button>
+            <button id="candles" aria-pressed="false" type="button" disabled>M15</button>
+          </div>
+        </div>
+        <div class="chart-wrap"><div id="chart" aria-label="Spot price and sampled candles"></div><p id="empty">Waiting for a spot quote</p></div>
+        <div class="chart-legend">
+          <span id="sampling">Collecting quotes</span>
+          <span><i class="dot gold"></i> H4 A resistance</span>
+          <span><i class="dot mint"></i> H4 V support</span>
+        </div>
+      </section>
+      <section class="panel" aria-labelledby="analysis-title">
+        <div class="panel-head"><div><h2 id="analysis-title">MSNR analysis</h2><p id="analysis-text" class="muted">Waiting for complete H4 candles</p></div></div>
+        <ol class="stages">
+          <li id="stage-watch"><strong>H4 rejection</strong><small>First visit to a fresh candle-body A or V level</small></li>
+          <li id="stage-break"><strong>M15 structure break</strong><small>Close outside the recent range</small></li>
+          <li id="stage-retest"><strong>M15 retest</strong><small>Closed-candle confirmation</small></li>
+        </ol>
+        <dl class="detail">
+          <div><dt>Nearest H4 level</dt><dd id="level">—</dd></div>
+          <div><dt>Break or retest level</dt><dd id="structure">—</dd></div>
+          <div><dt>Last confirmed signal</dt><dd id="signal">—</dd></div>
+          <div><dt>Paper position</dt><dd id="position">—</dd></div>
+        </dl>
+      </section>
+    </div>
+    <section class="panel journal" aria-labelledby="journal-title">
+      <div class="panel-head"><div><h2 id="journal-title">Paper execution journal</h2><p class="muted">Modeled spread and slippage applied to observed prices</p></div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Time UTC</th><th>Event</th><th>Details</th></tr></thead>
+          <tbody id="events"><tr><td colspan="3">Waiting for the first qualifying setup</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+    <footer><a href="https://gold-api.com/docs">Gold API</a><a href="https://www.tradingview.com/">Chart by TradingView</a></footer>
+  </main>
+</body>
+</html>
