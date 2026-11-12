@@ -1,6 +1,6 @@
 # XAU/USD MSNR Live
 
-Cloudflare Worker, D1 state and a responsive dashboard for sampled XAU/USD spot data, closed-candle MSNR analysis and a paper account. It uses the free Gold API spot endpoint and the open-source TradingView Lightweight Charts package. [Gold API](https://gold-api.com/docs) · [Lightweight Charts](https://github.com/tradingview/lightweight-charts)
+Python Cloudflare Worker, D1 state and a browser dashboard for sampled XAU/USD spot data, closed-candle MSNR analysis and a paper account. Python handles quote ingestion, strategy, execution, persistence and the background timer. The dashboard uses the free Gold API spot feed and TradingView Lightweight Charts. [Gold API](https://gold-api.com/docs) · [Lightweight Charts](https://github.com/tradingview/lightweight-charts)
 
 ## What runs
 
@@ -12,37 +12,38 @@ Cloudflare Worker, D1 state and a responsive dashboard for sampled XAU/USD spot 
 
 ## Local run
 
-Use Node.js 22 or newer.
+Install Python 3.13, uv, and Node.js 22 or newer for the Wrangler CLI.
 
 ```sh
-npm ci
-npm test
-npm run dev
+uv sync
+uv run python -m unittest discover -s test -v
+uv run pywrangler d1 migrations apply DB --local
+uv run pywrangler dev
 ```
 
-Open the localhost URL printed by Wrangler. The preview applies the D1 migration and uses the free quote endpoint. Test fixtures are used only by the test runner.
+Open the localhost URL printed by Wrangler. The preview uses the free quote endpoint. Test fixtures are used only by the test runner.
 
 ## Cloudflare deployment
 
 Sign in to the Cloudflare account where the Worker should live. Create the D1 database and copy its returned database ID into the existing `DB` entry in `wrangler.jsonc` as `database_id`.
 
 ```sh
-npm ci
-npx wrangler login
-npx wrangler d1 create xauusd-msnr-live
-npx wrangler d1 migrations apply DB --remote
-npm run deploy
+uv sync
+uv run pywrangler login
+uv run pywrangler d1 create xauusd-msnr-live
+uv run pywrangler d1 migrations apply DB --remote
+uv run pywrangler deploy
 ```
 
 If you have already deployed or claimed this Worker, use its existing D1 database ID and apply pending migrations there. Open the deployed dashboard once to start the Durable Object alarm. It schedules the next check every minute and shares the refresh lease with the browser. Confirm `backgroundAt` advances in `GET /api/state` while the dashboard is closed. The UI shows whether recent background checks were observed. [Durable Object alarms](https://developers.cloudflare.com/durable-objects/api/alarms/)
 
-For GitHub, commit this source without local Wrangler state or credentials. Push it to your chosen repository. In Cloudflare Workers & Pages, you can link the GitHub repository to deploy later commits. Use `npm ci && npm run build` for the build and `npx wrangler deploy` for deployment. Apply the remote D1 migration before the first production build. [Cloudflare GitHub integration](https://developers.cloudflare.com/workers/ci-cd/builds/git-integration/github-integration/)
+For a GitHub-connected Cloudflare build, make uv and Python 3.13 available and run `uv sync` followed by `uv run pywrangler deploy`. Apply the D1 migration before the first production build. [Python Workers](https://developers.cloudflare.com/workers/languages/python/) · [Cloudflare GitHub integration](https://developers.cloudflare.com/workers/ci-cd/builds/git-integration/github-integration/)
 
 ## API
 
 | Endpoint | Behaviour |
 | --- | --- |
-| `GET /api/state` | Reads the persisted quote, analysis, paper account and journal. |
+| `GET /api/state` | Reads the persisted quote, analysis, paper account and journal. The `runtime` field identifies the Python backend. |
 | `POST /api/refresh` | Runs the throttled update and returns current state. |
 
 The worker enforces one database-backed refresh lease across requests and scheduled runs. The dashboard keeps polling while open. The Cloudflare Durable Object alarm continues with the browser closed. If the upstream response is invalid, late or unavailable, the dashboard shows the feed issue and the bot waits for a fresh observation before evaluating an entry.

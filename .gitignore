@@ -1,6 +1,10 @@
-node_modules
-dist/
 .wrangler/
-worker/assets.generated.mjs
+.venv/
+.venv-workers/
+__pycache__/
+.pywrangler/
+.python_packages/
+.python_workers/
+python_modules/
 .dev.vars*
 .env*
