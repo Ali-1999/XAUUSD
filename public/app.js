@@ -24,30 +24,37 @@ const candles = chart.addSeries(charts.CandlestickSeries, {
   borderVisible: false, priceFormat: { type: "price", precision: 2, minMove: 0.01 },
 });
 let priceLines = [];
-let seriesName = "samples";
-let current = null;
 let busy = false;
-let renderedTime = null;
+let selected = el("timeframe").value;
+let renderedFrame = null;
+let renderedQuoteAt = 0;
+let frameRequest = 0;
 
-function chartData(data, reset = false) {
-  el("candles").disabled = data.bars.length === 0;
-  const useCandles = seriesName === "candles";
+function chartData(data) {
+  const series = data.chart;
+  const quoteAt = data.quote?.time ?? 0;
+  if (series?.timeframe !== selected || (renderedFrame === selected && quoteAt < renderedQuoteAt)) return;
+  const useCandles = selected !== "spot";
+  const visible = useCandles ? series.candles : series.points;
   line.applyOptions({ visible: !useCandles });
   candles.applyOptions({ visible: useCandles });
-  line.setData(data.points);
-  candles.setData(data.bars);
+  line.setData(useCandles ? [] : visible);
+  candles.setData(useCandles ? visible : []);
+  chart.timeScale().applyOptions({ timeVisible: !["D1", "W1", "MN1"].includes(selected) });
   for (const level of priceLines) candles.removePriceLine(level);
   priceLines = data.analysis.levels.map((level) => candles.createPriceLine({
     price: level.price, color: level.side === "buy" ? "#64d5ae" : "#efc579",
     lineWidth: 1, lineStyle: charts.LineStyle.Dashed, axisLabelVisible: true,
     title: level.side === "buy" ? "V" : "A",
   }));
-  const visible = useCandles ? data.bars : data.points;
   el("empty").hidden = visible.length > 0;
-  set("chart-caption", useCandles ? "Completed M15 candles from spot samples · UTC" : "Gold API spot samples · UTC");
-  const last = visible.at(-1)?.time;
-  if (last !== renderedTime || reset) chart.timeScale().fitContent();
-  renderedTime = last;
+  set("empty", "Waiting for a spot quote");
+  set("chart-caption", useCandles ? selected + " candles from Gold API spot samples · UTC" : "Gold API spot samples · UTC");
+  const count = visible.length + (useCandles ? " sampled candles" : " spot samples");
+  set("sampling", series.inProgress ? count + " · Latest candle in progress" : count);
+  if (renderedFrame !== selected && visible.length) chart.timeScale().fitContent();
+  renderedFrame = visible.length ? selected : null;
+  renderedQuoteAt = quoteAt;
 }
 
 function renderJournal(events) {
@@ -70,7 +77,6 @@ function renderJournal(events) {
 }
 
 function render(data) {
-  current = data;
   const q = data.quote;
   const a = data.account;
   const setup = data.analysis;
@@ -113,9 +119,15 @@ function render(data) {
   const pos = data.position;
   set("position", pos ? side(pos.side) + " · " + pos.lots + " lots" : "Flat");
   el("position").title = pos ? "SL " + price(pos.stop) + " · TP " + price(pos.target) : "";
-  set("sampling", data.barCount + " complete M15 · " + data.sampleCount + " samples this bar");
   chartData(data);
   renderJournal(data.events);
+}
+
+async function loadState(path, method, timeframe) {
+  const query = new URLSearchParams({ timeframe });
+  const response = await fetch(path + "?" + query, { method, cache: "no-store", signal: AbortSignal.timeout(12_000) });
+  if (!response.ok) throw new Error("HTTP " + response.status);
+  return response.json();
 }
 
 async function refresh() {
@@ -123,9 +135,7 @@ async function refresh() {
   busy = true;
   el("refresh").disabled = true;
   try {
-    const response = await fetch("/api/refresh", { method: "POST", cache: "no-store", signal: AbortSignal.timeout(12_000) });
-    if (!response.ok) throw new Error("HTTP " + response.status);
-    render(await response.json());
+    render(await loadState("/api/refresh", "POST", selected));
   } catch (error) {
     set("status", "Connection issue");
     el("status").className = "status";
@@ -137,14 +147,25 @@ async function refresh() {
   }
 }
 
-for (const name of ["samples", "candles"]) {
-  el(name).addEventListener("click", () => {
-    seriesName = name;
-    el("samples").setAttribute("aria-pressed", String(name === "samples"));
-    el("candles").setAttribute("aria-pressed", String(name === "candles"));
-    if (current) chartData(current, true);
-  });
-}
+el("timeframe").addEventListener("change", async () => {
+  selected = el("timeframe").value;
+  const request = ++frameRequest;
+  renderedFrame = null;
+  line.setData([]);
+  candles.setData([]);
+  for (const level of priceLines) candles.removePriceLine(level);
+  priceLines = [];
+  set("chart-caption", "Gold API spot samples · UTC");
+  set("sampling", "");
+  set("empty", "Loading " + (selected === "spot" ? "spot samples" : selected + " candles"));
+  el("empty").hidden = false;
+  try {
+    const data = await loadState("/api/state", "GET", selected);
+    if (request === frameRequest) chartData(data);
+  } catch (error) {
+    if (request === frameRequest && renderedFrame !== selected) set("empty", "Chart unavailable (" + error.message + ")");
+  }
+});
 el("refresh").addEventListener("click", refresh);
 refresh();
 setInterval(refresh, 20_000);

@@ -16,7 +16,7 @@
 body { margin: 0; color: var(--text); background: var(--bg); }
 h1, h2, p, dl, dd { margin: 0; }
 button { font: inherit; color: var(--text); cursor: pointer; }
-button:focus-visible, a:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+button:focus-visible, a:focus-visible, select:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
 button:disabled { cursor: default; opacity: .45; }
 [hidden] { display: none !important; }
 .muted, small, dt { color: var(--muted); font-size: 12px; line-height: 1.5; }
@@ -37,10 +37,10 @@ header { border-bottom: 1px solid var(--line); background: #101925; }
   color: var(--gold); font: 600 16px var(--mono);
 }
 .paper-tag { color: var(--gold); font-size: 12px; white-space: nowrap; }
-.header-end button, .segments button {
+.header-end button, .chart-control select {
   padding: 7px 10px; background: #162332; border: 1px solid var(--line); border-radius: 6px; font-size: 12px;
 }
-.header-end button:hover, .segments button[aria-pressed="true"] { border-color: #6d5834; color: var(--gold); }
+.header-end button:hover, .chart-control select:hover { border-color: #6d5834; color: var(--gold); }
 
 main { max-width: 1380px; margin: auto; padding: 22px 28px; }
 .market {
@@ -69,7 +69,9 @@ main { max-width: 1380px; margin: auto; padding: 22px 28px; }
 .desk { display: grid; grid-template-columns: minmax(0, 2.55fr) minmax(240px, 1fr); gap: 14px; }
 .panel-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 13px 16px; }
 .panel-head h2 { font-size: 16px; margin-bottom: 4px; }
-.segments { display: inline-flex; gap: 5px; }
+.chart-control { display: flex; align-items: center; gap: 8px; }
+.chart-control label { color: var(--muted); font-size: 12px; }
+.chart-control select { color: var(--text); font-family: inherit; cursor: pointer; }
 .chart-wrap { position: relative; border-top: 1px solid var(--line); }
 #chart { height: clamp(265px, 37vh, 390px); }
 #empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); pointer-events: none; font-size: 13px; }
@@ -114,4 +116,5 @@ footer a { color: var(--muted); }
   .paper-tag { font-size: 11px; }
   .mark { width: 34px; height: 34px; }
   .metrics article { padding: 10px; }
+  .chart-control { align-items: flex-start; flex-direction: column; gap: 3px; }
 }

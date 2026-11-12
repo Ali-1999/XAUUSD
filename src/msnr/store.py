@@ -2,6 +2,7 @@ import json
 from time import time
 from typing import Awaitable, Callable
 
+from .chart import chart_snapshot, record_quote
 from .engine import QuoteError, accept_quote, initial_state, snapshot
 
 POLL_SECONDS = 55
@@ -29,18 +30,26 @@ def read_state(payload: str | None) -> dict:
     return state
 
 
-async def persisted(db, now: int) -> dict:
+def response_snapshot(state: dict, now: int, timeframe: str | None) -> dict:
+    result = snapshot(state, now)
+    if timeframe is not None:
+        result["chart"] = chart_snapshot(state, timeframe, now)
+    return result
+
+
+async def persisted(db, now: int, timeframe: str | None = None) -> dict:
     row = await db.prepare(SELECT).first()
-    return snapshot(read_state(row.payload if row else None), now)
+    return response_snapshot(read_state(row.payload if row else None), now, timeframe)
 
 
 async def refresh(
-    db, trigger: str, get_quote: Callable[[int], Awaitable[dict]], *, now: int | None = None,
+    db, trigger: str, get_quote: Callable[[int], Awaitable[dict]], *,
+    now: int | None = None, timeframe: str | None = None,
 ) -> dict:
     now = int(time()) if now is None else now
     reservation = await db.prepare(ACQUIRE).bind(now + POLL_SECONDS, now + LEASE_SECONDS, now).first()
     if not reservation:
-        return await persisted(db, now)
+        return await persisted(db, now, timeframe)
     state = read_state(reservation.payload)
     state["attemptedAt"] = now
     state["runtime"] = "python"
@@ -51,10 +60,11 @@ async def refresh(
     except QuoteError as error:
         state["error"] = str(error)
     else:
-        accept_quote(state, quote, now)
+        if accept_quote(state, quote, now):
+            record_quote(state, quote)
         state["error"] = None
     payload = json.dumps(state, allow_nan=False, separators=(",", ":"))
     updated = await db.prepare(UPDATE).bind(payload, reservation.revision).run()
     if updated.meta.changes:
-        return snapshot(state, now)
-    return await persisted(db, now)
+        return response_snapshot(state, now, timeframe)
+    return await persisted(db, now, timeframe)

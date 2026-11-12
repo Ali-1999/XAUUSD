@@ -1,11 +1,12 @@
 import json
 import logging
 from time import time
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 from js import AbortSignal
 from workers import DurableObject, Response, WorkerEntrypoint, fetch
 
+from msnr.chart import TIMEFRAMES
 from msnr.engine import QuoteError, quote_from_provider
 from msnr.store import persisted, refresh
 
@@ -53,6 +54,10 @@ class Default(WorkerEntrypoint):
             return Response("Not found", status=404)
         if request.method != method:
             return json_response({"error": "Method not allowed"}, 405)
+        frames = parse_qs(url.query, keep_blank_values=True).get("timeframe")
+        timeframe = frames[0] if frames else None
+        if frames and (len(frames) != 1 or (timeframe != "spot" and timeframe not in TIMEFRAMES)):
+            return json_response({"error": "Unknown chart timeframe"}, 400)
         origin = request.headers.get("Origin")
         if method == "POST" and origin and origin != f"{url.scheme}://{url.netloc}":
             return json_response({"error": "Origin denied"}, 403)
@@ -60,9 +65,9 @@ class Default(WorkerEntrypoint):
             if method == "POST":
                 clock = self.env.CLOCK.getByName("xauusd-msnr")
                 await clock.fetch("https://clock.internal/start")
-                result = await refresh(self.env.DB, "request", get_quote)
+                result = await refresh(self.env.DB, "request", get_quote, timeframe=timeframe)
             else:
-                result = await persisted(self.env.DB, int(time()))
+                result = await persisted(self.env.DB, int(time()), timeframe)
             return json_response(result)
         except Exception:
             LOGGER.exception("MSNR storage or scheduling operation failed")

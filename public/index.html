@@ -41,9 +41,21 @@
       <section class="panel" aria-labelledby="chart-title">
         <div class="panel-head">
           <div><h2 id="chart-title">XAU/USD</h2><p class="muted" id="chart-caption">Gold API spot samples · UTC</p></div>
-          <div class="segments" aria-label="Chart series">
-            <button id="samples" aria-pressed="true" type="button">Samples</button>
-            <button id="candles" aria-pressed="false" type="button" disabled>M15</button>
+          <div class="chart-control">
+            <label for="timeframe">Timeframe</label>
+            <select id="timeframe">
+              <option value="spot">Spot samples</option>
+              <optgroup label="Minutes">
+                <option>M1</option><option>M2</option><option>M3</option><option>M4</option>
+                <option>M5</option><option>M6</option><option>M10</option><option>M12</option>
+                <option>M15</option><option>M20</option><option>M30</option>
+              </optgroup>
+              <optgroup label="Hours">
+                <option>H1</option><option>H2</option><option>H3</option><option>H4</option>
+                <option>H6</option><option>H8</option><option>H12</option>
+              </optgroup>
+              <optgroup label="Day and longer"><option>D1</option><option>W1</option><option>MN1</option></optgroup>
+            </select>
           </div>
         </div>
         <div class="chart-wrap"><div id="chart" aria-label="Spot price and sampled candles"></div><p id="empty">Waiting for a spot quote</p></div>

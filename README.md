@@ -5,6 +5,7 @@ Python Cloudflare Worker, D1 state and a browser dashboard for sampled XAU/USD s
 ## What runs
 
 - The Worker accepts a fresh XAU/USD provider timestamp and records at most one new observation per polling interval. The dashboard shows the feed timestamp, age, and whether native background checks are active.
+- The chart selector covers the spot sample line and all 21 standard MetaTrader 5 candle periods from M1 to MN1. Python builds sampled OHLC bars in UTC, with weeks starting Monday and months starting on the first. It retains up to 120 candles per period and marks the current candle as in progress. Longer periods build history as quotes arrive. The chart can show partial sample coverage, including for the initial candle.
 - M15 candles need at least nine observations with no gap over three minutes and adequate coverage near both ends. H4 candles require 16 consecutive completed M15 candles. Warm-up requires at least eight hours of adequate samples, plus alignment to a UTC H4 boundary. The spot series starts with the first observation.
 - The first visit to a fresh H4 candle-body A or V level consumes that level. A qualifying rejection must be followed by a closed M15 structure break and a later retest. A gap clears an in-progress setup. These are the same setup stages used in the MT5 demo baseline.
 - The simulated account starts at USD 10,000. Its first observed equity each UTC day sets the daily base. Risk starts at 0.25% per entry, capped by remaining room above a 1% daily equity cutoff. The engine allows up to three entries per UTC day, one open position and a 2R target. It rounds size down to the modeled lot step.
@@ -45,5 +46,7 @@ For a GitHub-connected Cloudflare build, make uv and Python 3.13 available and r
 | --- | --- |
 | `GET /api/state` | Reads the persisted quote, analysis, paper account and journal. The `runtime` field identifies the Python backend. |
 | `POST /api/refresh` | Runs the throttled update and returns current state. |
+
+Both endpoints accept an optional `timeframe` query parameter, such as `M5`, `H4`, `D1` or `spot`, to include the selected `chart` series. The chart selector uses a read-only request to switch periods. The strategy continues to use its validated M15 candles and H4 levels.
 
 The worker enforces one database-backed refresh lease across requests and scheduled runs. The dashboard keeps polling while open. The Cloudflare Durable Object alarm continues with the browser closed. If the upstream response is invalid, late or unavailable, the dashboard shows the feed issue and the bot waits for a fresh observation before evaluating an entry.
