@@ -50,7 +50,8 @@ function chartData(data) {
   el("empty").hidden = visible.length > 0;
   set("empty", "Waiting for a spot quote");
   set("chart-caption", useCandles ? selected + " candles from Gold API spot samples · UTC" : "Gold API spot samples · UTC");
-  const count = visible.length + (useCandles ? " sampled candles" : " spot samples");
+  const noun = useCandles ? "sampled candle" : "spot sample";
+  const count = visible.length + " " + noun + (visible.length === 1 ? "" : "s");
   set("sampling", series.inProgress ? count + " · Latest candle in progress" : count);
   if (renderedFrame !== selected && visible.length) chart.timeScale().fitContent();
   renderedFrame = visible.length ? selected : null;
